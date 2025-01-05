@@ -110,7 +110,6 @@ class GPTSoVITSModel:
             text_features = self._preprocess_text(text)
             
             # Stage 1: Text to hidden features
-            # Stage 1: Text to hidden features
             hidden = self.s1(text_features, ref_audio)
             # Stage 2: Hidden features to waveform
             waveform = self.s2_G(hidden)
@@ -129,3 +128,87 @@ class GPTSoVITSModel:
         except Exception as e:
             logger.error(f"Zero-shot inference failed: {str(e)}")
             raise RuntimeError(f"Zero-shot inference failed: {str(e)}")
+            
+    @inference_decorator
+    def few_shot_train(
+        self,
+        training_path: Path,
+    ) -> None:
+        """
+        Perform few-shot training on user's voice.
+        
+        Args:
+            training_path: Path to training audio file (3-120 seconds)
+        """
+        try:
+            logger.info("Starting few-shot training")
+            
+            # Load and validate training audio
+            y, sr = librosa.load(str(training_path), sr=44100)
+            duration = len(y) / sr
+            
+            if not (3 <= duration <= 120):
+                raise ValueError("Training audio must be between 3 and 120 seconds")
+                
+            # Preprocess training audio
+            audio_features = self._preprocess_audio(training_path)
+            if audio_features is None:
+                raise RuntimeError("Failed to preprocess training audio")
+                
+            # Perform few-shot training
+            self.s1.train()
+            self.s2_G.train()
+            try:
+                # Train stage 1 and 2 models
+                hidden = self.s1.train_step(audio_features)
+                self.s2_G.train_step(hidden, audio_features)
+                
+                logger.info("Few-shot training completed successfully")
+            finally:
+                # Ensure models are back in eval mode
+                self.s1.eval()
+                self.s2_G.eval()
+                
+        except Exception as e:
+            logger.error(f"Few-shot training failed: {str(e)}")
+            raise RuntimeError(f"Few-shot training failed: {str(e)}")
+            
+    @inference_decorator
+    def infer_few_shot(
+        self,
+        text: str,
+        output_path: Path,
+    ) -> None:
+        """
+        Generate speech using few-shot trained model.
+        
+        Args:
+            text: Input Japanese text
+            output_path: Path to save synthesized audio
+        """
+        try:
+            logger.info(f"Starting few-shot inference for text: {text}")
+            
+            # Preprocess text input
+            text_features = self._preprocess_text(text)
+            if text_features is None:
+                raise RuntimeError("Failed to preprocess text")
+                
+            # Generate speech using trained model
+            hidden = self.s1(text_features)
+            waveform = self.s2_G(hidden)
+            
+            # Post-process and save audio
+            audio_numpy = waveform.cpu().numpy()
+            sf.write(
+                str(output_path),
+                audio_numpy,
+                44100,
+                subtype='PCM_16'
+            )
+            
+            logger.info(f"Few-shot inference completed, saved to {output_path}")
+            
+        except Exception as e:
+            logger.error(f"Few-shot inference failed: {str(e)}")
+            raise RuntimeError(f"Few-shot inference failed: {str(e)}")

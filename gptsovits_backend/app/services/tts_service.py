@@ -198,13 +198,21 @@ class TTSService:
             if not self._validate_audio_length(train_path, 3, 120):
                 raise ValueError("Training audio must be between 3 and 120 seconds long")
             
-            # TODO: Implement actual GPT-SoVITS training and inference
-            # For now, return a portion of the training audio as a placeholder
-            y, sr = librosa.load(str(train_path), duration=5)
-            output_path = self.temp_dir / f"output_{os.urandom(8).hex()}.wav"
-            sf.write(output_path, y, sr)
+            # Initialize GPT-SoVITS model if not already initialized
+            if "gpt_sovits" not in self.models:
+                from ..models.gpt_sovits import GPTSoVITSModel
+                self.models["gpt_sovits"] = GPTSoVITSModel(self.models, self.device)
             
+            # Train model on user's voice
+            self.models["gpt_sovits"].few_shot_train(train_path)
+            
+            # Generate output path and perform inference
+            output_path = self.temp_dir / f"output_{os.urandom(8).hex()}.wav"
+            self.models["gpt_sovits"].infer_few_shot(text, output_path)
+            
+            # Get audio and duration
             output_audio = self._encode_audio_base64(output_path)
+            y, sr = librosa.load(str(output_path))
             duration = librosa.get_duration(y=y, sr=sr)
             
             # Clean up
