@@ -44,3 +44,5 @@ temp_output_*.wav
 
 # Logs
 *.log
+*.pyc
+__pycache__
