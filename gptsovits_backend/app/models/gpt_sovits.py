@@ -3,15 +3,11 @@
 import logging
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
 import soundfile as sf
 import torch
-import torch.cuda
-import torch.jit
-import torch.tensor
-import torch.utils.data
 from torch.cuda import is_available
 from torch.jit import inference_mode
 
@@ -73,11 +69,16 @@ class GPTSoVITSModel:
 
         # Apply voice separation using UVR5
         # Process audio tensor
-        audio_tensor = y.to(self.device).unsqueeze(0)  # Move to device and add batch dimension
+        # Move to device and add batch dimension
+        audio_tensor = y.to(self.device).unsqueeze(0)
         separated = self.uvr5(audio_tensor)
-        vocals = separated["vocals"].cpu().numpy()[0]  # Get vocals from separation model
+        # Get vocals from separation model
+        vocals = separated["vocals"].cpu().numpy()[0]
 
-        return torch.tensor(vocals, device=self.device)  # numpy array is already float32
+        # Convert numpy array to tensor and move to device
+        # Convert numpy array to tensor and move to device
+        # Convert numpy array to tensor and move to device
+        return torch.from_numpy(vocals).to(self.device)
 
     @inference_decorator
     def _preprocess_text(self, text: str) -> Optional[Any]:
@@ -89,7 +90,10 @@ class GPTSoVITSModel:
             features.append(segment.tokens)
         features = np.concatenate(features)
         features_tensor = features.astype(np.float32)
-        phoneme_features = torch.tensor(features_tensor, device=self.device)
+        # Convert features to tensor and move to device
+        # Convert features to tensor and move to device
+        # Convert features to tensor and move to device
+        phoneme_features = torch.from_numpy(features_tensor).to(self.device)
         return phoneme_features
 
     @inference_decorator
@@ -150,7 +154,7 @@ class GPTSoVITSModel:
             duration = len(y) / sr
 
             if not (3 <= duration <= 120):
-                msg = "Training audio must be " "between 3 and 120 seconds"
+                msg = "Training audio must be between 3 and 120 seconds"
                 raise ValueError(msg)
 
             # Preprocess training audio

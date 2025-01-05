@@ -7,18 +7,19 @@ import pytest
 import soundfile as sf
 from fastapi import status
 
-from app.models.tts import Language
+from app.models.tts import Language, TTSMode
 
 
 def test_zero_shot_tts_success(client, reference_audio):
     """Test successful zero-shot TTS request."""
     response = client.post(
-        "/tts/zero-shot",
+        "/api/tts/zero-shot",
         json={
             "text": "こんにちは、世界！",
             "reference_audio": reference_audio,
-            "source_lang": Language.JAPANESE,
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.JAPANESE,
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.ZERO_SHOT,
         },
     )
     assert response.status_code == status.HTTP_200_OK
@@ -33,12 +34,13 @@ def test_zero_shot_tts_success(client, reference_audio):
 def test_zero_shot_tts_invalid_language(client, reference_audio):
     """Test zero-shot TTS with invalid language."""
     response = client.post(
-        "/tts/zero-shot",
+        "/api/tts/zero-shot",
         json={
             "text": "Hello, World!",
             "reference_audio": reference_audio,
-            "source_lang": Language.ENGLISH,  # Invalid language
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.ENGLISH,  # Invalid language
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.ZERO_SHOT,
         },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -48,12 +50,13 @@ def test_zero_shot_tts_invalid_language(client, reference_audio):
 def test_few_shot_tts_success(client, training_audio):
     """Test successful few-shot TTS request."""
     response = client.post(
-        "/tts/few-shot",
+        "/api/tts/few-shot",
         json={
             "text": "こんにちは、世界！",
             "training_audio": training_audio,
-            "source_lang": Language.JAPANESE,
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.JAPANESE,
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.FEW_SHOT,
         },
     )
     assert response.status_code == status.HTTP_200_OK
@@ -68,12 +71,13 @@ def test_few_shot_tts_success(client, training_audio):
 def test_few_shot_tts_invalid_language(client, training_audio):
     """Test few-shot TTS with invalid language."""
     response = client.post(
-        "/tts/few-shot",
+        "/api/tts/few-shot",
         json={
             "text": "Hello, World!",
             "training_audio": training_audio,
-            "source_lang": Language.ENGLISH,  # Invalid language
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.ENGLISH,  # Invalid language
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.FEW_SHOT,
         },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -93,12 +97,13 @@ def test_zero_shot_tts_invalid_audio_length(client):
         short_audio = base64.b64encode(f.read()).decode()
 
     response = client.post(
-        "/tts/zero-shot",
+        "/api/tts/zero-shot",
         json={
             "text": "こんにちは、世界！",
             "reference_audio": short_audio,
-            "source_lang": Language.JAPANESE,
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.JAPANESE,
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.ZERO_SHOT,
         },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -122,12 +127,13 @@ def test_few_shot_tts_invalid_audio_length(client):
         short_audio = base64.b64encode(f.read()).decode()
 
     response = client.post(
-        "/tts/few-shot",
+        "/api/tts/few-shot",
         json={
             "text": "こんにちは、世界！",
             "training_audio": short_audio,
-            "source_lang": Language.JAPANESE,
-            "target_lang": Language.JAPANESE,
+            "source_language": Language.JAPANESE,
+            "target_language": Language.JAPANESE,
+            "mode": TTSMode.FEW_SHOT,
         },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST

@@ -15,7 +15,7 @@ import torch.nn as nn
 
 from ..config import Settings
 from ..models.tts import Language
-from ..models.utils import load_checkpoint, load_wav_to_torch
+from ..models.utils import load_checkpoint
 
 # Define supported languages
 JAPANESE = Language.JAPANESE
@@ -61,7 +61,8 @@ class TTSService:
                     msg = f"Model file not found: {model_path}"
                     raise FileNotFoundError(msg)
                 logger.info(f"Loading {model_key} from {model_path}")
-                model = nn.Module()  # Placeholder module for checkpoint loading
+                # Create placeholder module for checkpoint loading
+                model = nn.Module()
                 self.models[model_key], _, _, _ = load_checkpoint(
                     str(model_path), model, skip_optimizer=True
                 )
@@ -156,7 +157,8 @@ class TTSService:
         if source_lang != JAPANESE or target_lang != JAPANESE:
             raise ValueError(
                 "このサービスは日本語のみをサポートしています。"
-                "\nThis service only supports Japanese language input and output."
+                "\nThis service only supports Japanese language "
+                "input and output for zero-shot TTS."
             )
 
         self._validate_models()  # Ensure models are loaded
@@ -165,7 +167,7 @@ class TTSService:
             # Save reference audio
             ref_path = self._save_base64_audio(reference_audio, "ref")
 
-            # Validate reference audio length (2-10 seconds, recommended: 5 seconds)
+            # Validate reference audio length (2-10s, recommended: 5s)
             if not self._validate_audio_length(ref_path, 2, 10):
                 raise ValueError(
                     "リファレンス音声は2〜10秒の長さが必要です。推奨は5秒です。"
@@ -203,6 +205,8 @@ class TTSService:
             output_path.unlink()
 
             return output_audio, duration
+        except ValueError as e:
+            raise ValueError(str(e))
         except Exception as e:
             raise RuntimeError(f"Zero-shot TTS processing failed: {str(e)}")
 
@@ -221,7 +225,8 @@ class TTSService:
         if source_lang != JAPANESE or target_lang != JAPANESE:
             raise ValueError(
                 "このサービスは日本語のみをサポートしています。"
-                "\nThis service only supports Japanese language input and output."
+                "\nThis service only supports Japanese language "
+                "input and output for few-shot TTS."
             )
 
         self._validate_models()  # Ensure models are loaded
@@ -229,7 +234,7 @@ class TTSService:
             # Save training audio
             train_path = self._save_base64_audio(training_audio, "train")
 
-            # Validate training audio length (3-120 seconds, recommended: 60 seconds)
+            # Validate training audio length (3-120s, recommended: 60s)
             if not self._validate_audio_length(train_path, 3, 120):
                 raise ValueError(
                     "トレーニング音声は3〜120秒の長さが必要です。推奨は60秒です。"
@@ -264,5 +269,7 @@ class TTSService:
             output_path.unlink()
 
             return output_audio, duration
+        except ValueError as e:
+            raise ValueError(str(e))
         except Exception as e:
             raise RuntimeError(f"Few-shot TTS processing failed: {str(e)}")
