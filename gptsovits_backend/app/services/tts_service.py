@@ -11,15 +11,12 @@ import librosa
 import torch
 import torch.cuda
 import torch.jit
-import torch.tensor
-import torch.utils.data
-import torch.utils.model_zoo
 
 from ..config import Settings
 from ..models.tts import Language
 
 # Define supported languages
-JA = getattr(Language, "JA")
+JAPANESE = Language.JAPANESE
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -153,7 +150,7 @@ class TTSService:
         Returns: (base64_audio, duration)
         """
         # Validate language support (Japanese only)
-        if source_lang != JA or target_lang != JA:
+        if source_lang != JAPANESE or target_lang != JAPANESE:
             raise ValueError(
                 "このサービスは日本語のみをサポートしています。"
                 "\nThis service only supports Japanese language input and output."
@@ -218,7 +215,7 @@ class TTSService:
         Returns: (base64_audio, duration)
         """
         # Validate language support (Japanese only)
-        if source_lang != JA or target_lang != JA:
+        if source_lang != JAPANESE or target_lang != JAPANESE:
             raise ValueError(
                 "このサービスは日本語のみをサポートしています。"
                 "\nThis service only supports Japanese language input and output."
