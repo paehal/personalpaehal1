@@ -30,9 +30,7 @@ class TTSRequest(BaseModel):
     source_language: Language = Field(..., description="Source text language")
     target_language: Language = Field(
         ...,
-        description=(
-            "Target speech language"
-        ),
+        description=("Target speech language"),
     )
     mode: TTSMode = Field(..., description="TTS processing mode")
 
@@ -58,19 +56,13 @@ class TTSResponse(BaseModel):
 
     audio: str = Field(
         ...,
-        description=(
-            "Base64 encoded output audio"
-        ),
+        description=("Base64 encoded output audio"),
     )
     duration: float = Field(
         ...,
-        description=(
-            "Duration of the output audio in seconds"
-        ),
+        description=("Duration of the output audio in seconds"),
     )
     error: Optional[str] = Field(
         None,
-        description=(
-            "Error message if processing failed"
-        ),
+        description=("Error message if processing failed"),
     )

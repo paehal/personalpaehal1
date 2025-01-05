@@ -1,4 +1,5 @@
 """Main FastAPI application for GPT-SoVITS TTS service."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +19,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(tts.router)
+
 
 @app.get("/healthz")
 async def healthz():

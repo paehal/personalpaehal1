@@ -154,10 +154,7 @@ class GPTSoVITSModel:
             duration = len(y) / sr
 
             if not (3 <= duration <= 120):
-                msg = (
-                    "Training audio must be "
-                    "between 3 and 120 seconds"
-                )
+                msg = "Training audio must be " "between 3 and 120 seconds"
                 raise ValueError(msg)
 
             # Preprocess training audio

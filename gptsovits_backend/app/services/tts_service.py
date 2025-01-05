@@ -87,14 +87,11 @@ class TTSService:
             # Load Faster Whisper ASR model for Japanese
             asr_path = self.model_dir / "asr/models"
             logger.info(f"Loading Faster Whisper model from {asr_path}")
+            compute_type = "float16" if self.device == "cuda" else "float32"
             self.models["asr"] = faster_whisper.WhisperModel(
                 model_size_or_path=str(asr_path),
                 device=self.device,
-                compute_type=(
-                    "float16"
-                    if self.device == "cuda"
-                    else "float32"
-                ),
+                compute_type=compute_type,
             )
 
             logger.info("All models loaded successfully")
