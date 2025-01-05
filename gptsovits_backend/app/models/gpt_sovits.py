@@ -3,9 +3,8 @@
 import logging
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
-import librosa
 import numpy as np
 import soundfile as sf
 import torch
@@ -15,6 +14,8 @@ import torch.tensor
 import torch.utils.data
 from torch.cuda import is_available
 from torch.jit import inference_mode
+
+from .utils import load_wav_to_torch
 
 logger = logging.getLogger(__name__)
 
@@ -64,24 +65,19 @@ class GPTSoVITSModel:
     def _preprocess_audio(self, audio_path: Path) -> Optional[Any]:
         """Preprocess audio file for inference."""
         # Load and normalize audio
-        y, sr = librosa.load(str(audio_path), sr=44100)
+        y, sr = load_wav_to_torch(str(audio_path))
 
         # Convert to mono if stereo
         if len(y.shape) > 1:
-            y = librosa.to_mono(y)
+            y = y.mean(dim=0)  # PyTorch equivalent of librosa.to_mono
 
         # Apply voice separation using UVR5
-        # Convert to mono if stereo
-        if len(y.shape) > 1:
-            y = librosa.to_mono(y)
-
-        # Convert to tensor and process
-        y_tensor = y.astype(np.float32)
-        audio_tensor = torch.tensor(y_tensor, device=self.device).unsqueeze(0)
+        # Process audio tensor
+        audio_tensor = y.to(self.device).unsqueeze(0)  # Move to device and add batch dimension
         separated = self.uvr5(audio_tensor)
-        vocals = separated["vocals"].cpu().numpy()[0]
+        vocals = separated["vocals"].cpu().numpy()[0]  # Get vocals from separation model
 
-        return torch.tensor(vocals.astype(np.float32), device=self.device)
+        return torch.tensor(vocals, device=self.device)  # numpy array is already float32
 
     @inference_decorator
     def _preprocess_text(self, text: str) -> Optional[Any]:
@@ -150,7 +146,7 @@ class GPTSoVITSModel:
             logger.info("Starting few-shot training")
 
             # Load and validate training audio
-            y, sr = librosa.load(str(training_path), sr=44100)
+            y, sr = load_wav_to_torch(str(training_path))
             duration = len(y) / sr
 
             if not (3 <= duration <= 120):

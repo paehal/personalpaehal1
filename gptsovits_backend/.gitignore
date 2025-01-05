@@ -33,7 +33,11 @@ env/
 *.swo
 
 # Project specific
-models/
+models/*.ckpt
+models/*.pth
+models/*.bin
+models/*.pt
+models/*.onnx
 test_data/
 *.wav
 temp_output_*.wav

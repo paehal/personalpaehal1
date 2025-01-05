@@ -11,9 +11,11 @@ import librosa
 import torch
 import torch.cuda
 import torch.jit
+import torch.nn as nn
 
 from ..config import Settings
 from ..models.tts import Language
+from ..models.utils import load_checkpoint, load_wav_to_torch
 
 # Define supported languages
 JAPANESE = Language.JAPANESE
@@ -59,8 +61,9 @@ class TTSService:
                     msg = f"Model file not found: {model_path}"
                     raise FileNotFoundError(msg)
                 logger.info(f"Loading {model_key} from {model_path}")
-                self.models[model_key] = torch.jit.load(
-                    str(model_path), map_location=self.device
+                model = nn.Module()  # Placeholder module for checkpoint loading
+                self.models[model_key], _, _, _ = load_checkpoint(
+                    str(model_path), model, skip_optimizer=True
                 )
 
             # Load UVR5 model for voice separation
