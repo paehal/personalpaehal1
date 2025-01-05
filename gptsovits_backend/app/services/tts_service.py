@@ -2,11 +2,22 @@ import base64
 import os
 from pathlib import Path
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from ..models.tts import Language, TTSMode
 from ..config import Settings
 import librosa
 import soundfile as sf
+import torch
+import torch.cuda
+import torch.nn as nn
+import torch.utils.data
+import torch.utils.model_zoo
+import faster_whisper
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class TTSService:
     """Service for handling Text-to-Speech operations."""
@@ -19,6 +30,67 @@ class TTSService:
         # Ensure directories exist
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize models
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.models: Dict[str, Any] = {}
+        self._load_models()
+    
+    def _load_models(self) -> None:
+        """Load all required models."""
+        try:
+            # Load GPT-SoVITS models
+            gpt_sovits_path = self.model_dir / "gpt_sovits"
+            logger.info(f"Loading GPT-SoVITS models from {gpt_sovits_path}")
+            
+            checkpoint_paths = {
+                "s1": gpt_sovits_path / "s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt",
+                "s2_D": gpt_sovits_path / "s2D488k.pth",
+                "s2_G": gpt_sovits_path / "s2G488k.pth"
+            }
+            
+            for model_key, model_path in checkpoint_paths.items():
+                if not model_path.exists():
+                    raise FileNotFoundError(f"Model file not found: {model_path}")
+                logger.info(f"Loading {model_key} from {model_path}")
+                self.models[model_key] = torch.load(
+                    model_path,
+                    map_location=self.device
+                )
+            
+            # Load UVR5 model for voice separation
+            uvr5_path = self.model_dir / "uvr5/uvr5_weights/vits_vc_gpu_train/uvr5_weights"
+            uvr5_files = list(uvr5_path.glob("*.pth"))
+            if not uvr5_files:
+                raise FileNotFoundError(f"No UVR5 model files found in {uvr5_path}")
+            uvr5_model_path = uvr5_files[0]  # Use first .pth file found
+            logger.info(f"Loading UVR5 model from {uvr5_model_path}")
+            self.models["uvr5"] = torch.load(
+                uvr5_model_path,
+                map_location=self.device
+            )
+            
+            # Load Faster Whisper ASR model for Japanese
+            asr_path = self.model_dir / "asr/models"
+            logger.info(f"Loading Faster Whisper model from {asr_path}")
+            self.models["asr"] = faster_whisper.WhisperModel(
+                model_size_or_path=str(asr_path),
+                device=self.device,
+                compute_type="float16" if self.device == "cuda" else "float32"
+            )
+            
+            logger.info("All models loaded successfully")
+            self._validate_models()
+        except Exception as e:
+            logger.error(f"Error loading models: {str(e)}")
+            raise RuntimeError(f"Failed to load required models: {str(e)}")
+    
+    def _validate_models(self) -> None:
+        """Validate that all required models are loaded."""
+        required_models = ["s1", "s2_D", "s2_G", "uvr5", "asr"]
+        missing_models = [model for model in required_models if model not in self.models]
+        if missing_models:
+            raise RuntimeError(f"Missing required models: {', '.join(missing_models)}")
 
     def _validate_audio_length(self, audio_path: Path, min_length: int, max_length: int) -> bool:
         """Validate audio file length."""
@@ -59,6 +131,7 @@ class TTSService:
         Process zero-shot TTS request.
         Returns: (base64_audio, duration)
         """
+        self._validate_models()  # Ensure models are loaded
         try:
             # Save reference audio
             ref_path = self._save_base64_audio(reference_audio, "ref")
@@ -91,6 +164,7 @@ class TTSService:
         Process few-shot TTS request.
         Returns: (base64_audio, duration)
         """
+        self._validate_models()  # Ensure models are loaded
         try:
             # Save training audio
             train_path = self._save_base64_audio(training_audio, "train")
