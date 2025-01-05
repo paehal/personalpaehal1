@@ -1,6 +1,9 @@
-from pydantic import BaseModel, Field
+"""Models for Text-to-Speech request/response handling."""
 from enum import Enum
 from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class Language(str, Enum):
     """Supported languages for TTS."""

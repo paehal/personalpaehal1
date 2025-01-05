@@ -1,6 +1,9 @@
+"""Main FastAPI application for GPT-SoVITS TTS service."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .routers import tts
+
 
 app = FastAPI(title="GPT-SoVITS API")
 

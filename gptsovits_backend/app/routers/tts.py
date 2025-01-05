@@ -1,15 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
+"""FastAPI router for Text-to-Speech endpoints."""
+from fastapi import APIRouter, Depends, HTTPException
+
+from ..config import Settings, get_settings
 from ..models.tts import (
-    ZeroShotTTSRequest,
     FewShotTTSRequest,
     TTSResponse,
-    Language,
-    TTSMode
+    ZeroShotTTSRequest,
 )
-from ..config import get_settings, Settings
 from ..services.tts_service import TTSService
-import base64
-from pathlib import Path
+
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 
