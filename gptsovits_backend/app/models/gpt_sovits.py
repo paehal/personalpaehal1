@@ -1,15 +1,17 @@
 """GPT-SoVITS model implementation for Japanese TTS."""
-from typing import Optional, Dict, Any, Union, cast
 import logging
 from functools import wraps
 from pathlib import Path
-import numpy as np
-import librosa
-import soundfile as sf
+from typing import Any, Dict, Optional
 
+import librosa
+import numpy as np
+import soundfile as sf
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import torch.cuda
+import torch.jit
+import torch.tensor
+import torch.utils.data
 from torch.cuda import is_available
 from torch.jit import inference_mode
 
@@ -69,11 +71,13 @@ class GPTSoVITSModel:
             y = librosa.to_mono(y)
             
         # Convert to tensor and process
-        audio_tensor = torch.from_numpy(y.astype(np.float32)).unsqueeze(0).to(self.device)
+        audio_tensor = torch.tensor(
+            y.astype(np.float32), device=self.device
+        ).unsqueeze(0)
         separated = self.uvr5(audio_tensor)
         vocals = separated['vocals'].cpu().numpy()[0]
         
-        return torch.from_numpy(vocals.astype(np.float32)).to(self.device)
+        return torch.tensor(vocals.astype(np.float32), device=self.device)
     
     @inference_decorator
     def _preprocess_text(self, text: str) -> Optional[Any]:
@@ -84,7 +88,9 @@ class GPTSoVITSModel:
         for segment in segments:
             features.append(segment.tokens)
         features = np.concatenate(features)
-        phoneme_features = torch.from_numpy(features.astype(np.float32)).to(self.device)
+        phoneme_features = torch.tensor(
+            features.astype(np.float32), device=self.device
+        )
         return phoneme_features
     
     @inference_decorator

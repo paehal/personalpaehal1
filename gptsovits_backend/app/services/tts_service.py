@@ -1,22 +1,24 @@
+"""Service for handling Text-to-Speech operations."""
 import base64
+import logging
 import os
 from pathlib import Path
-import numpy as np
-from typing import Optional, Tuple, Dict, Any
-from ..models.tts import Language, TTSMode
+from typing import Any, Dict, Optional, Tuple
+
+import faster_whisper
+import librosa
+import torch
+import torch.cuda
+import torch.jit
+import torch.tensor
+import torch.utils.data
+import torch.utils.model_zoo
+
+from ..config import Settings
+from ..models.tts import Language
 
 # Define supported languages
 JA = getattr(Language, "JA")
-from ..config import Settings
-import librosa
-import soundfile as sf
-import torch
-import torch.cuda
-import torch.nn as nn
-import torch.utils.data
-import torch.utils.model_zoo
-import faster_whisper
-import logging
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -56,8 +58,8 @@ class TTSService:
                 if not model_path.exists():
                     raise FileNotFoundError(f"Model file not found: {model_path}")
                 logger.info(f"Loading {model_key} from {model_path}")
-                self.models[model_key] = torch.load(
-                    model_path,
+                self.models[model_key] = torch.jit.load(
+                    str(model_path),
                     map_location=self.device
                 )
             
@@ -68,8 +70,8 @@ class TTSService:
                 raise FileNotFoundError(f"No UVR5 model files found in {uvr5_path}")
             uvr5_model_path = uvr5_files[0]  # Use first .pth file found
             logger.info(f"Loading UVR5 model from {uvr5_model_path}")
-            self.models["uvr5"] = torch.load(
-                uvr5_model_path,
+            self.models["uvr5"] = torch.jit.load(
+                str(uvr5_model_path),
                 map_location=self.device
             )
             
