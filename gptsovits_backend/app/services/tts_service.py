@@ -152,9 +152,12 @@ class TTSService:
         Process zero-shot TTS request.
         Returns: (base64_audio, duration)
         """
-        # Validate language support
+        # Validate language support (Japanese only)
         if source_lang != JA or target_lang != JA:
-            raise ValueError("Only Japanese language is supported")
+            raise ValueError(
+                "このサービスは日本語のみをサポートしています。"
+                "\nThis service only supports Japanese language input and output."
+            )
 
         self._validate_models()  # Ensure models are loaded
 
@@ -162,10 +165,12 @@ class TTSService:
             # Save reference audio
             ref_path = self._save_base64_audio(reference_audio, "ref")
 
-            # Validate reference audio length (2-10 seconds)
+            # Validate reference audio length (2-10 seconds, recommended: 5 seconds)
             if not self._validate_audio_length(ref_path, 2, 10):
                 raise ValueError(
-                    "Reference audio must be between 2 and 10 seconds long"
+                    "リファレンス音声は2〜10秒の長さが必要です。推奨は5秒です。"
+                    "\nReference audio must be between 2 and 10 seconds long. "
+                    "Recommended length is 5 seconds."
                 )
 
             # Initialize GPT-SoVITS model if not already initialized
@@ -212,15 +217,24 @@ class TTSService:
         Process few-shot TTS request.
         Returns: (base64_audio, duration)
         """
+        # Validate language support (Japanese only)
+        if source_lang != JA or target_lang != JA:
+            raise ValueError(
+                "このサービスは日本語のみをサポートしています。"
+                "\nThis service only supports Japanese language input and output."
+            )
+
         self._validate_models()  # Ensure models are loaded
         try:
             # Save training audio
             train_path = self._save_base64_audio(training_audio, "train")
 
-            # Validate training audio length (3-120 seconds)
+            # Validate training audio length (3-120 seconds, recommended: 60 seconds)
             if not self._validate_audio_length(train_path, 3, 120):
                 raise ValueError(
-                    "Training audio must be between 3 and 120 seconds long"
+                    "トレーニング音声は3〜120秒の長さが必要です。推奨は60秒です。"
+                    "\nTraining audio must be between 3 and 120 seconds long. "
+                    "Recommended length is 60 seconds."
                 )
 
             # Initialize GPT-SoVITS model if not already initialized
