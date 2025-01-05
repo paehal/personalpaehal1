@@ -1,0 +1,1 @@
+# Model Files Directory\n\nThis directory is used for storing model files during development and testing.\n\n## Note\nLarge model files (*.ckpt) are not tracked in git. Please refer to the main models/gpt_sovits/README.md for instructions on downloading required model files.
