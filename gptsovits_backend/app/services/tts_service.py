@@ -4,6 +4,9 @@ from pathlib import Path
 import numpy as np
 from typing import Optional, Tuple, Dict, Any
 from ..models.tts import Language, TTSMode
+
+# Define supported languages
+JA = getattr(Language, "JA")
 from ..config import Settings
 import librosa
 import soundfile as sf
@@ -131,7 +134,12 @@ class TTSService:
         Process zero-shot TTS request.
         Returns: (base64_audio, duration)
         """
+        # Validate language support
+        if source_lang != JA or target_lang != JA:
+            raise ValueError("Only Japanese language is supported")
+            
         self._validate_models()  # Ensure models are loaded
+        
         try:
             # Save reference audio
             ref_path = self._save_base64_audio(reference_audio, "ref")
@@ -140,14 +148,31 @@ class TTSService:
             if not self._validate_audio_length(ref_path, 2, 10):
                 raise ValueError("Reference audio must be between 2 and 10 seconds long")
             
-            # TODO: Implement actual GPT-SoVITS inference
-            # For now, return the reference audio as a placeholder
-            output_audio = self._encode_audio_base64(ref_path)
-            y, sr = librosa.load(str(ref_path))
+            # Initialize GPT-SoVITS model if not already initialized
+            if "gpt_sovits" not in self.models:
+                from ..models.gpt_sovits import GPTSoVITSModel
+                self.models["gpt_sovits"] = GPTSoVITSModel(self.models, self.device)
+            
+            # Generate output path
+            output_path = self.temp_dir / f"output_{os.urandom(8).hex()}.wav"
+            
+            # Perform inference
+            self.models["gpt_sovits"].infer_zero_shot(
+                text=text,
+                reference_path=ref_path,
+                output_path=output_path
+            )
+            
+            # Encode result to base64
+            output_audio = self._encode_audio_base64(output_path)
+            
+            # Get duration
+            y, sr = librosa.load(str(output_path))
             duration = librosa.get_duration(y=y, sr=sr)
             
             # Clean up
             ref_path.unlink()
+            output_path.unlink()
             
             return output_audio, duration
         except Exception as e:

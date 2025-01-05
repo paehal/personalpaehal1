@@ -1,2 +1,14 @@
-flake8==7.0.0
-black==24.1.1
+# Development Tools / 開発ツール
+flake8==7.0.0  # Linting tool / リントツール
+black==24.1.1  # Code formatter / コードフォーマッター
+
+# GPT-SoVITS Dependencies / GPT-SoVITS 依存関係
+torch>=2.0.1    # PyTorch for deep learning / ディープラーニング用PyTorch
+numpy           # Numerical computing / 数値計算
+scipy           # Scientific computing / 科学計算
+librosa         # Audio processing / 音声処理
+ffmpeg-python   # FFmpeg Python bindings / FFmpegのPythonバインディング
+
+# Note: Requires Python 3.9 or 3.10 / 注意: Python 3.9または3.10が必要
+# Note: FFmpeg must be installed on the system / 注意: システムにFFmpegのインストールが必要
+# Note: Minimum 16GB RAM required / 注意: 最低16GBのRAMが必要
