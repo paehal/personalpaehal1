@@ -6,27 +6,30 @@ import re
 from typing import List
 import pyopenjtalk
 
+
 class JapaneseTextProcessor:
     """Japanese text processor for GPT-SoVITS.
-    
+
     GPT-SoVITS用の日本語テキストプロセッサー
     """
     def __init__(self):
         self._setup_regex_patterns()
-        
+
     def _setup_regex_patterns(self):
         """Set up regex patterns for text processing.
-        
+
         テキスト処理用の正規表現パターンを設定
         """
         # Regular expression matching Japanese without punctuation marks
         self._japanese_characters = re.compile(
-            r"[A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]"
+            r"[A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff"
+            + r"\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]"
         )
-        
-        # Regular expression matching non-Japanese characters or punctuation marks
+
+        # Regex for non-Japanese chars and punctuation
         self._japanese_marks = re.compile(
-            r"[^A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]"
+            r"[^A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff"
+            + r"\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]"
         )
         
         # Punctuation replacement mapping
@@ -44,11 +47,14 @@ class JapaneseTextProcessor:
         }
         
         # Symbol to Japanese mapping
-        self._symbols_to_japanese = [(re.compile("%s" % x[0]), x[1]) for x in [("％", "パーセント")]]
-        
+        self._symbols_to_japanese = [
+            (re.compile(r"%s" % sym), reading)
+            for sym, reading in [("％", "パーセント")]
+        ]
+
     def normalize_text(self, text: str) -> str:
         """Normalize Japanese text by standardizing punctuation and symbols.
-        
+
         句読点や記号を標準化して日本語テキストを正規化します。
 
         Args:
@@ -71,9 +77,11 @@ class JapaneseTextProcessor:
         
         return text
         
-    def text_to_phonemes(self, text: str, with_prosody: bool = True) -> List[str]:
+    def text_to_phonemes(
+        self, text: str, with_prosody: bool = True
+    ) -> List[str]:
         """Convert Japanese text to phoneme sequence.
-        
+
         日本語テキストを音素列に変換します。
 
         Args:
@@ -99,24 +107,28 @@ class JapaneseTextProcessor:
             if re.match(self._japanese_characters, sentence):
                 if with_prosody:
                     # Use OpenJTalk with prosody
-                    labels = pyopenjtalk.make_label(pyopenjtalk.run_frontend(sentence))
+                    text_labels = pyopenjtalk.run_frontend(sentence)
+                    labels = pyopenjtalk.make_label(text_labels)
                     phones = self._extract_phonemes_with_prosody(labels)
                     phonemes.extend(phones)
                 else:
-                    # Use basic OpenJTalk phoneme conversion with explicit は handling
+                    # Basic OpenJTalk phoneme conversion
                     p = pyopenjtalk.g2p(sentence)
                     
                     # Convert to phonemes with explicit は handling
                     phones = []
                     if is_first:
-                        phones.append("^")  # Add start marker for first sentence
+                        # Add start marker for first sentence
+                        phones.append("^")
                         is_first = False
                     
                     p_list = p.split(" ")
                     i = 0
                     while i < len(p_list):
                         # Handle は sound (appears as "w a" or "wa")
-                        if (p_list[i] == "w" and i + 1 < len(p_list) and p_list[i + 1] == "a"):
+                        curr = p_list[i]
+                        next_p = p_list[i + 1] if i + 1 < len(p_list) else None
+                        if curr == "w" and next_p == "a":
                             phones.extend(["h", "a"])
                             i += 2
                         elif p_list[i] == "wa":
@@ -158,16 +170,15 @@ class JapaneseTextProcessor:
         
         OpenJTalkラベルから韻律情報付きの音素を抽出します。
 
-        Args: 
+        Args:
             labels (List[str]): OpenJTalk full-context labels
-            
+
         Returns:
             List[str]: Phonemes with prosody markers
         """
         phones = []
         N = len(labels)
-        
-        
+
         for n in range(N):
             lab_curr = labels[n]
             
@@ -198,7 +209,8 @@ class JapaneseTextProcessor:
             # Handle は sound explicitly
             elif p3 == "h" and next_p3 == "a":
                 phones.extend(["h", "a"])
-                n += 1  # Skip next phoneme since we handled it
+                # Skip next phoneme since we handled it
+                n += 1
                 continue
                 
             phones.append(p3)
