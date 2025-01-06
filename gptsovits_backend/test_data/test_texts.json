@@ -1,0 +1,46 @@
+{
+    "zero_shot": {
+        "basic": [
+            {
+                "text": "こんにちは、音声合成のテストです。",
+                "description": "基本的な挨拶とテスト説明 / Basic greeting and test description"
+            },
+            {
+                "text": "今日は良い天気ですね。",
+                "description": "天気に関する一般的な会話 / Common weather-related conversation"
+            }
+        ],
+        "complex": [
+            {
+                "text": "自然な抑揚で日本語を話すことができます。",
+                "description": "自然な発話のテスト / Testing natural speech patterns"
+            },
+            {
+                "text": "感情を込めて、様々な表現を試してみましょう。",
+                "description": "感情表現のテスト / Testing emotional expression"
+            }
+        ]
+    },
+    "few_shot": {
+        "basic": [
+            {
+                "text": "このテストは、Few-shot TTSの基本的な機能を確認します。",
+                "description": "Few-shot基本テスト / Few-shot basic test"
+            },
+            {
+                "text": "声の特徴を学習して、自然な発話を生成します。",
+                "description": "声質学習テスト / Voice characteristic learning test"
+            }
+        ],
+        "complex": [
+            {
+                "text": "長文での自然な抑揚と息継ぎのテストを行います。",
+                "description": "長文テスト / Long text test"
+            },
+            {
+                "text": "質問や感嘆文など、様々なイントネーションを試します。",
+                "description": "イントネーションテスト / Intonation test"
+            }
+        ]
+    }
+}
