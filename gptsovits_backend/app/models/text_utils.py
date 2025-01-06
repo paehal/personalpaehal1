@@ -40,7 +40,7 @@ class JapaneseTextProcessor:
             "\n": ".",
             "·": ",",
             "、": ",",
-            "...": "…",
+            "...": ".",
         }
         
         # Symbol to Japanese mapping
@@ -65,8 +65,9 @@ class JapaneseTextProcessor:
         for old, new in self._punctuation_map.items():
             text = text.replace(old, new)
             
-        # Remove consecutive punctuation marks
-        text = re.sub(r'([,.!?])[,.!?]+', r'\1', text)
+        # Handle special punctuation combinations
+        text = re.sub(r'([!?])\1+', r'\1', text)  # Collapse repeated ! or ?
+        text = re.sub(r'([,.])\1+', r'\1', text)  # Collapse repeated , or .
         
         return text
         
@@ -82,6 +83,10 @@ class JapaneseTextProcessor:
         Returns:
             List[str]: List of phonemes / 音素のリスト
         """
+        # Handle empty input
+        if not text.strip():
+            return []
+            
         text = self.normalize_text(text)
         text = text.lower()  # Convert English to lowercase
         
@@ -89,6 +94,7 @@ class JapaneseTextProcessor:
         marks = re.findall(self._japanese_marks, text)
         
         phonemes = []
+        is_first = True  # Track first sentence for start marker
         for i, sentence in enumerate(sentences):
             if re.match(self._japanese_characters, sentence):
                 if with_prosody:
@@ -97,14 +103,53 @@ class JapaneseTextProcessor:
                     phones = self._extract_phonemes_with_prosody(labels)
                     phonemes.extend(phones)
                 else:
-                    # Use basic OpenJTalk phoneme conversion
+                    # Use basic OpenJTalk phoneme conversion with explicit は handling
                     p = pyopenjtalk.g2p(sentence)
-                    phonemes.extend(p.split(" "))
+                    
+                    # Convert to phonemes with explicit は handling
+                    phones = []
+                    if is_first:
+                        phones.append("^")  # Add start marker for first sentence
+                        is_first = False
+                    
+                    p_list = p.split(" ")
+                    i = 0
+                    while i < len(p_list):
+                        # Handle は sound (appears as "w a" or "wa")
+                        if (p_list[i] == "w" and i + 1 < len(p_list) and p_list[i + 1] == "a"):
+                            phones.extend(["h", "a"])
+                            i += 2
+                        elif p_list[i] == "wa":
+                            phones.extend(["h", "a"])
+                            i += 1
+                        else:
+                            phones.append(p_list[i])
+                            i += 1
+                    
+                    phonemes.extend(phones)
             
             # Add punctuation marks
             if i < len(marks):
                 if marks[i] != " ":  # Skip spaces to prevent UNK tokens
-                    phonemes.append(marks[i].replace(" ", ""))
+                    mark = marks[i].replace(" ", "")
+                    phonemes.append(mark)
+            
+            # Add punctuation marks
+            if i < len(marks):
+                mark = marks[i].replace(" ", "")
+                if mark != " ":  # Skip spaces to prevent UNK tokens
+                    phonemes.append(mark)
+            
+            # Handle end marker for last sentence
+            if i == len(sentences) - 1 and text.strip():
+                # Add default period if no final punctuation
+                if not phonemes or phonemes[-1] not in ".!?":
+                    phonemes.append(".")
+                # Add end marker based on final punctuation
+                if phonemes[-1] == "?":
+                    phonemes.append("?")  # Keep question mark
+                else:
+                    phonemes.append("$")  # Add end marker
                     
         return phonemes
         
@@ -132,17 +177,28 @@ class JapaneseTextProcessor:
                 continue
             p3 = p3.group(1)
             
+            # Look ahead for next phoneme
+            next_p3 = None
+            if n + 1 < N:
+                next_match = re.search(r"\-(.*?)\+", labels[n + 1])
+                if next_match:
+                    next_p3 = next_match.group(1)
+            
             # Handle silence and pauses
             if p3 == "sil":
                 if n == 0:
                     phones.append("^")  # Start marker
                 elif n == N - 1:
-                    # Check question form
-                    e3 = re.search(r"!(\d+)_", lab_curr)
-                    phones.append("?" if e3 and e3.group(1) == "1" else "$")
+                    phones.append("$")  # End marker
                 continue
             elif p3 == "pau":
                 phones.append("_")
+                continue
+            
+            # Handle は sound explicitly
+            elif p3 == "h" and next_p3 == "a":
+                phones.extend(["h", "a"])
+                n += 1  # Skip next phoneme since we handled it
                 continue
                 
             phones.append(p3)
